@@ -12,6 +12,8 @@ from datetime import datetime
 from pymongo import MongoClient
 import bcrypt
 import pandas as pd
+from langchain.schema import Document
+from docx import Document as DocxDocument
 
 # -------------------------------
 # Load environment variables
@@ -119,7 +121,6 @@ from langchain_community.document_loaders import (
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
-from docx import Document
 
 # -------------------------------
 # Helper — Compute MD5 Hash
@@ -137,23 +138,24 @@ def compute_md5(file_path: Path) -> str:
 def load_document(file_path: Path):
     ext = file_path.suffix.lower()
     if ext == ".pdf":
-        loader = PyPDFLoader(str(file_path))
-        return loader.load()
+        return PyPDFLoader(str(file_path)).load()
     elif ext == ".txt":
-        loader = TextLoader(str(file_path))
-        return loader.load()
+        with open(file_path, "r", encoding="utf-8") as f:
+            text = f.read()
+        return [Document(page_content=text, metadata={"source": str(file_path)})]
     elif ext == ".csv":
-        loader = CSVLoader(str(file_path))
-        return loader.load()
+        df = pd.read_csv(file_path)
+        return [Document(page_content=df.to_string(index=False), metadata={"source": str(file_path)})]
     elif ext == ".json":
-        loader = JSONLoader(str(file_path))
-        return loader.load()
+        with open(file_path, "r", encoding="utf-8") as f:
+            text = f.read()
+        return [Document(page_content=text, metadata={"source": str(file_path)})]
     elif ext == ".html":
-        loader = UnstructuredHTMLLoader(str(file_path))
-        return loader.load()
+        return UnstructuredHTMLLoader(str(file_path)).load()
     elif ext == ".docx":
-        doc = Document(str(file_path))
-        return [{"page_content": "\n".join([p.text for p in doc.paragraphs]), "metadata": {"source": str(file_path)}}]
+        doc = DocxDocument(str(file_path))
+        text = "\n".join([p.text for p in doc.paragraphs if p.text.strip()])
+        return [Document(page_content=text, metadata={"source": str(file_path)})]
     else:
         st.warning(f"⚠️ Unsupported file type: {ext}")
         return []
@@ -162,11 +164,8 @@ def load_document(file_path: Path):
 # Streamlit Setup
 # -------------------------------
 st.set_page_config(page_title="Smart RAG Chat Assistant 🤖", layout="wide")
-
 st.title("🤖 Smart RAG Chat Assistant")
-st.markdown("""
-Chat with your **PDF, DOCX, TXT, CSV, JSON, or HTML** files — powered by **Groq + LangChain + MongoDB + ChromaDB + HuggingFace**.
-""")
+st.markdown("Chat with **PDF, DOCX, TXT, CSV, JSON, or HTML** files using **Groq + LangChain + MongoDB + ChromaDB + HuggingFace**.")
 
 # -------------------------------
 # Directory Setup (Per User)
@@ -176,17 +175,15 @@ data_dir = base_dir / "data"
 chroma_dir = base_dir / "chroma_db"
 logs_dir = base_dir / "logs"
 
-data_dir.mkdir(exist_ok=True)
-chroma_dir.mkdir(exist_ok=True)
-logs_dir.mkdir(exist_ok=True)
+for d in [data_dir, chroma_dir, logs_dir]:
+    d.mkdir(exist_ok=True)
 
 user_data_dir = data_dir / session_id
 user_chroma_dir = chroma_dir / session_id
 user_logs_dir = logs_dir / session_id
 
-user_data_dir.mkdir(exist_ok=True)
-user_chroma_dir.mkdir(exist_ok=True)
-user_logs_dir.mkdir(exist_ok=True)
+for d in [user_data_dir, user_chroma_dir, user_logs_dir]:
+    d.mkdir(exist_ok=True)
 
 # -------------------------------
 # Chat Logger
@@ -272,7 +269,7 @@ if to_process:
     for file, file_hash in to_process:
         docs = load_document(file)
         for d in docs:
-            d["metadata"] = {"source": str(file), "hash": file_hash}
+            d.metadata = {"source": str(file), "hash": file_hash}
         all_docs.extend(docs)
 
     splitter = RecursiveCharacterTextSplitter(chunk_size=800, chunk_overlap=100)
@@ -284,15 +281,26 @@ if to_process:
 retriever = db.as_retriever(search_kwargs={"k": 3})
 
 # -------------------------------
+# 🧠 Knowledge Base Viewer
+# -------------------------------
+if tabs == "🧠 Knowledge Base Viewer":
+    st.header("🧠 Knowledge Base Viewer")
+    meta_data = db.get(include=["metadatas", "documents"])
+    if not meta_data["documents"]:
+        st.info("📭 No documents found. Upload files and process them first.")
+    else:
+        for i, (doc, meta) in enumerate(zip(meta_data["documents"], meta_data["metadatas"]), start=1):
+            st.markdown(f"### 🧩 Chunk {i}")
+            st.markdown(f"**Source:** {Path(meta['source']).name}")
+            st.markdown(f"**Excerpt:** {doc[:300]}...")
+            st.divider()
+
+# -------------------------------
 # 💬 Chat Interface
 # -------------------------------
 if tabs == "💬 Chat Interface":
     st.header("💬 Chat with Your Documents")
-
-    model_choice = st.selectbox(
-        "Select Model:",
-        ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma-7b-it"]
-    )
+    model_choice = st.selectbox("Select Model:", ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma-7b-it"])
 
     llm = ChatGroq(model=model_choice, groq_api_key=os.getenv("GROQ_API_KEY"))
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
