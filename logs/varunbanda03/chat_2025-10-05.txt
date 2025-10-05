@@ -1,0 +1,28 @@
+[20:06:34] USER: tell me about varun 
+[20:06:34] ASSISTANT: Varun Banda appears to be a student currently pursuing a degree in Artificial Intelligence & Machine Learning from RV College of Engineering in Bengaluru, India. He is expected to graduate in June 2026.
+
+Varun has shown a strong interest in coding and AI, as evident from his involvement in various technical projects and extracurricular activities. Some of his notable projects include:
+
+1. Deep Audio Classifier for Capuchin Bird Density in Amazon Rainforest: This project involves building a deep learning-based web application that automatically detects Capuchin bird vocalizations from rainforest audio recordings.
+2. LifeLink – Smart Blood Hospital Management System: This is a full-stack web application that streamlines blood inventory and hospital management, supporting multiple user roles with secure authentication and workflow automation.
+3. A voice input/output project using Streamlit: This project involves building a lightweight, browser-based UI for seamless accessibility, using tools like Python, Streamlit, Groq API, LLaMA 3.2B, SpeechRecognition, gTTS, LangGraph, and dotenv.
+
+Varun has also been involved in various extracurricular activities, including:
+
+1. Coding club in RV College of Engineering: He has been a part of this club since August 2023.
+2. NCC- AITSC 2023 (Gold medal in Health and Hygiene Event): He won a gold medal in this event in June 2023.
+3. NCC B Certificate: He has obtained this certificate.
+4. NCC C Certificate: He has also obtained this certificate.
+
+In terms of technical skills, Varun has experience with programming languages like C++, Python (basic), and MySQL. He is also familiar with backend/frontend tools like HTML, CSS, JavaScript, and PHP. Additionally, he has experience with software and tools like VS Code, Draw.IO, W&B (basics), and PHPMailer.
+
+Overall, Varun appears to be a diligent and talented individual with a strong interest in AI, coding, and project development.
+
+[20:06:52] USER: what varun did in ncc
+[20:06:52] ASSISTANT: According to the provided context, Varun Banda participated in the NCC (National Cadet Corps) from June 2023 to October 2023 and also received the following NCC certificates:
+
+- NCC B Certificate
+- NCC C Certificate
+
+Additionally, it is mentioned that Varun Banda won a gold medal in a Health and Hygiene Event at AITSC 2023 (which is likely a regional or national-level event for NCC cadets).
+

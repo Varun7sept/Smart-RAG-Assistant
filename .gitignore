@@ -1,0 +1,8 @@
+# Ignore environment and sensitive files
+.env
+venv/
+__pycache__/
+*.pyc
+data/
+chroma_db/
+chat_history_*.txt
