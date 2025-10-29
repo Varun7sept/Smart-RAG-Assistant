@@ -1,6 +1,6 @@
 # -------------------------------
 # 🤖 Smart RAG Chat Assistant (Multi-user + MongoDB + Multi-format Upload + Chat Logging)
-# Persistent + Conversational + Upload + Delete + Viewer + Memory Reset + Save Logs
+# Persistent + Conversational + Upload + Delete + Viewer + Memory Reset + Save Logs + Voice Input/Output
 # -------------------------------
 
 import streamlit as st
@@ -14,6 +14,12 @@ import bcrypt
 import pandas as pd
 from langchain.schema import Document
 from docx import Document as DocxDocument
+
+# 🎙️ Additional imports for Voice Features (Speech-to-Text & Text-to-Speech)
+import speech_recognition as sr
+from gtts import gTTS
+import tempfile
+import base64
 
 # -------------------------------
 # Load environment variables
@@ -300,7 +306,13 @@ if tabs == "🧠 Knowledge Base Viewer":
 # -------------------------------
 if tabs == "💬 Chat Interface":
     st.header("💬 Chat with Your Documents")
-    model_choice = st.selectbox("Select Model:", ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma-7b-it"])
+
+    # ✅ Updated models (deprecated ones removed)
+    model_choice = st.selectbox(
+        "Select Model:",
+        ["llama-3.1-8b-instant", "llama-3.1-70b-versatile", "mixtral-8x22b", "gemma2-9b-it"],
+        index=0
+    )
 
     llm = ChatGroq(model=model_choice, groq_api_key=os.getenv("GROQ_API_KEY"))
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
@@ -314,13 +326,50 @@ if tabs == "💬 Chat Interface":
     if "history" not in st.session_state:
         st.session_state.history = []
 
+    # 🎤 Voice Input Section
+    st.markdown("#### 🎙 Voice Input")
+    voice_button = st.button("🎤 Speak to Ask")
+    spoken_text = ""
+    if voice_button:
+        recognizer = sr.Recognizer()
+        with sr.Microphone() as source:
+            st.info("🎧 Listening... Speak now!")
+            audio = recognizer.listen(source)
+        try:
+            spoken_text = recognizer.recognize_google(audio)
+            st.success(f"🗣 You said: {spoken_text}")
+        except sr.UnknownValueError:
+            st.error("❌ Could not understand your speech.")
+        except sr.RequestError:
+            st.error("⚠️ Could not connect to the speech service.")
+
     user_input = st.chat_input("Ask a question about your files...")
+    if spoken_text:
+        user_input = spoken_text
+
     if user_input:
-        result = qa_chain.invoke({"question": user_input})
-        answer = result["answer"]
-        st.session_state.history.append(("user", user_input))
-        st.session_state.history.append(("assistant", answer))
-        log_chat(username, user_input, answer)
+        try:
+            result = qa_chain.invoke({"question": user_input})
+            answer = result["answer"]
+            st.session_state.history.append(("user", user_input))
+            st.session_state.history.append(("assistant", answer))
+            log_chat(username, user_input, answer)
+
+            # 🔊 Voice Output Section
+            st.markdown("#### 🔊 Listen to Response")
+            tts = gTTS(answer)
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".mp3") as tmp:
+                tts.save(tmp.name)
+                audio_file = tmp.name
+            with open(audio_file, "rb") as f:
+                audio_bytes = f.read()
+                b64 = base64.b64encode(audio_bytes).decode()
+                audio_html = f'<audio autoplay controls src="data:audio/mp3;base64,{b64}"></audio>'
+                st.markdown(audio_html, unsafe_allow_html=True)
+
+        except Exception as e:
+            st.error(f"⚠️ Groq API Error: {e}")
+            st.info("Try selecting another available model.")
 
     for role, message in st.session_state.history:
         st.chat_message(role).markdown(f"**{role.capitalize()}:** {message}")
