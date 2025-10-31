@@ -300,15 +300,9 @@ if tabs == "🧠 Knowledge Base Viewer":
 # -------------------------------
 if tabs == "💬 Chat Interface":
     st.header("💬 Chat with Your Documents")
+    model_choice = st.selectbox("Select Model:", ["llama-3.1-8b-instant", "mixtral-8x7b-32768", "gemma-7b-it"])
 
-    # ✅ Updated models (deprecated ones removed)
-    model_choice = st.selectbox(
-        "Select Model:",
-        ["llama-3.1-8b-instant", "llama-3.1-70b-versatile", "mixtral-8x22b", "gemma2-9b-it"],
-        index=0
-    )
-
-    llm = ChatGroq(model=model_choice, groq_api_key=os.getenv("GROQ_API_KEY"))
+    llm = ChatGroq(model=model_choice, groq_api_key=os.getenv("Groq_API_KEY"))
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
     qa_chain = ConversationalRetrievalChain.from_llm(llm=llm, retriever=retriever, memory=memory)
 
@@ -322,15 +316,11 @@ if tabs == "💬 Chat Interface":
 
     user_input = st.chat_input("Ask a question about your files...")
     if user_input:
-        try:
-            result = qa_chain.invoke({"question": user_input})
-            answer = result["answer"]
-            st.session_state.history.append(("user", user_input))
-            st.session_state.history.append(("assistant", answer))
-            log_chat(username, user_input, answer)
-        except Exception as e:
-            st.error(f"⚠️ Groq API Error: {e}")
-            st.info("Try selecting another available model.")
+        result = qa_chain.invoke({"question": user_input})
+        answer = result["answer"]
+        st.session_state.history.append(("user", user_input))
+        st.session_state.history.append(("assistant", answer))
+        log_chat(username, user_input, answer)
 
     for role, message in st.session_state.history:
         st.chat_message(role).markdown(f"**{role.capitalize()}:** {message}")
